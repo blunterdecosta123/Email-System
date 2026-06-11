@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Create account - Email System</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body class="auth-page">
+<main class="auth-shell">
+    <section class="panel">
+        <h1>Create account</h1>
+        <p class="muted">Register with the email address you want to use in the system.</p>
+
+        <form th:action="@{/register}" th:object="${form}" method="post" class="stack">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+            <div class="alert error" th:if="${#fields.hasGlobalErrors()}" th:each="err : ${#fields.globalErrors()}" th:text="${err}"></div>
+            <label>
+                Display name
+                <input type="text" th:field="*{displayName}" autocomplete="name" required>
+                <span class="field-error" th:errors="*{displayName}"></span>
+            </label>
+            <label>
+                Email
+                <input type="email" th:field="*{email}" autocomplete="email" required>
+                <span class="field-error" th:errors="*{email}"></span>
+            </label>
+            <label>
+                Password
+                <input type="password" th:field="*{password}" autocomplete="new-password" required minlength="8">
+                <span class="field-error" th:errors="*{password}"></span>
+            </label>
+            <button type="submit">Create account</button>
+        </form>
+
+        <p class="small">Already registered? <a th:href="@{/login}">Sign in</a></p>
+    </section>
+</main>
+</body>
+</html>

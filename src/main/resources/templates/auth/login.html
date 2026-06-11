@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sign in - Email System</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body class="auth-page">
+<main class="auth-shell">
+    <section class="panel">
+        <h1>Email System</h1>
+        <p class="muted">Sign in to manage secure email communication.</p>
+
+        <div class="alert success" th:if="${success}" th:text="${success}"></div>
+        <div class="alert error" th:if="${param.error}">Invalid email or password.</div>
+        <div class="alert success" th:if="${param.logout}">You have been signed out.</div>
+
+        <form th:action="@{/login}" method="post" class="stack">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+            <label>
+                Email
+                <input type="email" name="username" autocomplete="username" required autofocus>
+            </label>
+            <label>
+                Password
+                <input type="password" name="password" autocomplete="current-password" required>
+            </label>
+            <button type="submit">Sign in</button>
+        </form>
+
+        <p class="small">Need an account? <a th:href="@{/register}">Create one</a></p>
+    </section>
+</main>
+</body>
+</html>

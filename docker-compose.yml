@@ -1,0 +1,40 @@
+services:
+  app:
+    build: .
+    container_name: email-system-app
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/email_system?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      DB_USERNAME: root
+      DB_PASSWORD: password
+      MAIL_HOST: ${MAIL_HOST:-}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      POP3_HOST: ${POP3_HOST:-}
+      POP3_PORT: ${POP3_PORT:-995}
+      POP3_SSL: ${POP3_SSL:-true}
+      POP3_USERNAME: ${POP3_USERNAME:-}
+      POP3_PASSWORD: ${POP3_PASSWORD:-}
+      POP3_MAX_MESSAGES: ${POP3_MAX_MESSAGES:-10}
+    ports:
+      - "8080:8080"
+
+  mysql:
+    image: mysql:8.4
+    container_name: email-system-mysql
+    environment:
+      MYSQL_DATABASE: email_system
+      MYSQL_ROOT_PASSWORD: password
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-ppassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mysql-data:
