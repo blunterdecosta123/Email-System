@@ -11,7 +11,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import java.time.LocalDateTime;
 
@@ -30,12 +29,10 @@ public class EmailMessage {
     @Column(nullable = false)
     private EmailDirection direction;
 
-    @Email
     @NotBlank
     @Column(nullable = false)
     private String sender;
 
-    @Email
     @NotBlank
     @Column(nullable = false)
     private String recipient;

@@ -3,6 +3,7 @@ package com.example.emailsystem.controller;
 import com.example.emailsystem.domain.EmailMessage;
 import com.example.emailsystem.domain.User;
 import com.example.emailsystem.service.EmailService;
+import com.example.emailsystem.service.ReceiveResult;
 import com.example.emailsystem.service.UserService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
@@ -67,8 +68,8 @@ public class EmailController {
     public String receive(@AuthenticationPrincipal UserDetails principal, RedirectAttributes redirectAttributes) {
         User user = userService.getByEmail(principal.getUsername());
         try {
-            int count = emailService.receive(user);
-            redirectAttributes.addFlashAttribute("success", "Imported " + count + " message(s).");
+            ReceiveResult result = emailService.receive(user);
+            redirectAttributes.addFlashAttribute(result.imported() > 0 ? "success" : "error", result.message());
         } catch (IllegalStateException ex) {
             redirectAttributes.addFlashAttribute("error", ex.getMessage());
         }

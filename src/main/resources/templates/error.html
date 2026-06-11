@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Error - Email System</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<header class="topbar">
+    <strong>Email System</strong>
+    <nav>
+        <a th:href="@{/}">History</a>
+        <a th:href="@{/login}">Sign in</a>
+    </nav>
+</header>
+
+<main class="container narrow">
+    <section class="panel">
+        <h1>Something went wrong</h1>
+        <p class="muted" th:if="${status}">
+            Status <span th:text="${status}"></span>
+            <span th:if="${error}"> - <span th:text="${error}"></span></span>
+        </p>
+        <p th:if="${message}" th:text="${message}"></p>
+        <p th:unless="${message}" class="muted">The request could not be completed.</p>
+        <div class="actions">
+            <a class="button secondary" th:href="@{/}">Back to history</a>
+        </div>
+    </section>
+</main>
+</body>
+</html>

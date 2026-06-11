@@ -19,6 +19,8 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Properties;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -28,6 +30,8 @@ import org.springframework.util.StringUtils;
 
 @Service
 public class EmailService {
+
+    private static final Logger log = LoggerFactory.getLogger(EmailService.class);
 
     private final EmailMessageRepository emailMessageRepository;
     private final JavaMailSender mailSender;
@@ -108,7 +112,7 @@ public class EmailService {
     }
 
     @Transactional
-    public int receive(User owner) {
+    public ReceiveResult receive(User owner) {
         if (!StringUtils.hasText(pop3Host) || !StringUtils.hasText(pop3Username) || !StringUtils.hasText(pop3Password)) {
             throw new IllegalStateException("POP3 settings are not configured.");
         }
@@ -123,6 +127,8 @@ public class EmailService {
         properties.put("mail." + protocol + ".writetimeout", "10000");
 
         int imported = 0;
+        int duplicates = 0;
+        int skipped = 0;
         try {
             Session session = Session.getInstance(properties);
             Store store = session.getStore(protocol);
@@ -136,30 +142,38 @@ public class EmailService {
 
             for (int i = messages.length - 1; i >= 0; i--) {
                 Message source = messages[i];
-                String providerId = firstHeader(source, "Message-ID");
-                if (providerId != null && emailMessageRepository.existsByOwnerAndProviderMessageId(owner, providerId)) {
-                    continue;
-                }
+                try {
+                    String providerId = firstHeader(source, "Message-ID");
+                    if (providerId != null && emailMessageRepository.existsByOwnerAndProviderMessageId(owner, providerId)) {
+                        duplicates++;
+                        continue;
+                    }
 
-                Address[] from = source.getFrom();
-                Address[] recipients = source.getRecipients(Message.RecipientType.TO);
-                String body = extractText(source);
-                saveMessage(
-                        owner,
-                        EmailDirection.RECEIVED,
-                        addressValue(from, "unknown@example.com"),
-                        addressValue(recipients, owner.getEmail()),
-                        source.getSubject() == null ? "(no subject)" : source.getSubject(),
-                        StringUtils.hasText(body) ? body : "(empty message)",
-                        messageDate(source),
-                        providerId);
-                imported++;
+                    Address[] from = source.getFrom();
+                    Address[] recipients = source.getRecipients(Message.RecipientType.TO);
+                    String body = extractText(source);
+                    saveMessage(
+                            owner,
+                            EmailDirection.RECEIVED,
+                            addressValue(from, "unknown@example.com"),
+                            addressValue(recipients, owner.getEmail()),
+                            textOrDefault(source.getSubject(), "(no subject)"),
+                            StringUtils.hasText(body) ? body : "(empty message)",
+                            messageDate(source),
+                            providerId);
+                    imported++;
+                } catch (MessagingException | IOException | RuntimeException ex) {
+                    skipped++;
+                    log.warn("Skipping POP3 message during import: {}", ex.getMessage());
+                    // Some POP3 messages can contain unsupported or malformed content.
+                    // Skip that message so one bad email does not block the inbox import.
+                }
             }
 
             inbox.close(false);
             store.close();
-            return imported;
-        } catch (MessagingException | IOException ex) {
+            return new ReceiveResult(messages.length, imported, duplicates, skipped);
+        } catch (MessagingException ex) {
             throw new IllegalStateException("Unable to receive email. Check POP3 settings and credentials.", ex);
         }
     }
@@ -176,10 +190,10 @@ public class EmailService {
         EmailMessage emailMessage = new EmailMessage();
         emailMessage.setOwner(owner);
         emailMessage.setDirection(direction);
-        emailMessage.setSender(sender);
-        emailMessage.setRecipient(recipient);
-        emailMessage.setSubject(subject);
-        emailMessage.setBody(body);
+        emailMessage.setSender(textOrDefault(sender, "unknown@example.com"));
+        emailMessage.setRecipient(textOrDefault(recipient, owner.getEmail()));
+        emailMessage.setSubject(textOrDefault(subject, "(no subject)"));
+        emailMessage.setBody(textOrDefault(body, "(empty message)"));
         emailMessage.setMessageDate(messageDate);
         emailMessage.setProviderMessageId(providerMessageId);
         return emailMessageRepository.save(emailMessage);
@@ -223,8 +237,12 @@ public class EmailService {
             return fallback;
         }
         if (addresses[0] instanceof InternetAddress internetAddress) {
-            return internetAddress.getAddress();
+            return textOrDefault(internetAddress.getAddress(), fallback);
         }
-        return addresses[0].toString();
+        return textOrDefault(addresses[0].toString(), fallback);
+    }
+
+    private String textOrDefault(String value, String fallback) {
+        return StringUtils.hasText(value) ? value.trim() : fallback;
     }
 }
